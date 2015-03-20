@@ -14,7 +14,8 @@
 4. 在用来回测或优化的项目中的Scenario中添加如下
 <pre><code>
 using QuantBox;
-
+</code></pre>
+<pre><code>
 public Backtest(Framework framework)
 	: base(framework)
 {
