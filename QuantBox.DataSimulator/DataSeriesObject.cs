@@ -96,8 +96,9 @@ namespace QuantBox
                 var dateTime = _current.Codec.GetDateTime(tick.ActionDay == 0?tick.TradingDay:tick.ActionDay).Add(_current.Codec.GetUpdateTime(tick));
 
                 // 在这个地方式可以试着生成自己的TradeEx，这样在策略中，模拟与实盘的效果就完全一样了
-                if (_info.SubscribeBidAsk) {
-                    int count = tick.DepthList.Count;
+                if (_info.SubscribeBidAsk)
+                {
+                    int count = tick.DepthList == null ? 0 : tick.DepthList.Count;
                     if(count>0)
                     {
                         int AskPos = DepthListHelper.FindAsk1Position(tick.DepthList, tick.AskPrice1);
