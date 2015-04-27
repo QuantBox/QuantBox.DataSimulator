@@ -169,6 +169,7 @@ namespace QuantBox
 
         public void Clear()
         {
+            base.Clear();
             _dataSeries.Clear();
             DateTime1 = DateTime.MinValue;
             DateTime2 = DateTime.MaxValue;

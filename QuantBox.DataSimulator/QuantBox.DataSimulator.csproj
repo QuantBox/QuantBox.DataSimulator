@@ -31,9 +31,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="QuantBox.Data.Serializer, Version=2014.12.23.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="QuantBox.APIProvider, Version=0.8.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Program Files\SmartQuant Ltd\OpenQuant 2014\QuantBox.Data.Serializer.dll</HintPath>
+      <HintPath>C:\Program Files\SmartQuant Ltd\OpenQuant 2014\QuantBox.APIProvider.dll</HintPath>
+    </Reference>
+    <Reference Include="QuantBox.Data.Serializer, Version=2015.3.26.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\lib\QuantBox.Data.Serializer.dll</HintPath>
+    </Reference>
+    <Reference Include="QuantBox.XAPI, Version=1.2.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files\SmartQuant Ltd\OpenQuant 2014\QuantBox.XAPI.dll</HintPath>
     </Reference>
     <Reference Include="SevenZipSharp">
       <HintPath>..\packages\SevenZipSharp.0.64\lib\SevenZipSharp.dll</HintPath>

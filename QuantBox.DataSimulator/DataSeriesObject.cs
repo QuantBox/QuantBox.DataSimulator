@@ -6,6 +6,9 @@ using System.Text.RegularExpressions;
 using SmartQuant;
 
 using QuantBox.Data.Serializer.V2;
+using QuantBox.XAPI;
+using Ideafixxxer.Generics;
+using QuantBox.APIProvider;
 
 namespace QuantBox
 {
@@ -79,6 +82,109 @@ namespace QuantBox
             Init();
         }
 
+        private DepthMarketDataField PbTick2DepthMarketDataField(PbTickCodec codec, PbTick tick)
+        {
+            PbTickView tickView = codec.Data2View(tick, false);
+
+            DepthMarketDataField marketData = default(DepthMarketDataField);
+            codec.GetUpdateTime(tick, out marketData.UpdateTime, out marketData.UpdateMillisec);
+
+            marketData.TradingDay = tickView.TradingDay;
+            marketData.ActionDay = tickView.ActionDay;
+            marketData.LastPrice = tickView.LastPrice;
+            marketData.Volume = tickView.Volume;
+            marketData.Turnover = tickView.Turnover;
+            marketData.OpenInterest = tickView.OpenInterest;
+            marketData.AveragePrice = tickView.AveragePrice;
+            if(tickView.Bar != null)
+            {
+                marketData.OpenPrice = tickView.Bar.Open;
+                marketData.HighestPrice = tickView.Bar.High;
+                marketData.LowestPrice = tickView.Bar.Low;
+                marketData.ClosePrice = tickView.Bar.Close;
+            }
+            if(tickView.Static != null)
+            {
+                marketData.LowerLimitPrice = tickView.Static.LowerLimitPrice;
+                marketData.UpperLimitPrice = tickView.Static.UpperLimitPrice;
+                marketData.SettlementPrice = tickView.Static.SettlementPrice;
+                marketData.Symbol = tickView.Static.Symbol;
+                if (!string.IsNullOrWhiteSpace(tickView.Static.Exchange))
+                {
+                    marketData.Exchange = Enum<ExchangeType>.Parse(tickView.Static.Exchange);
+                }
+            }
+
+            int count = tickView.DepthList == null ? 0 : tickView.DepthList.Count;
+            if (count > 0)
+            {
+                int AskPos = DepthListHelper.FindAsk1Position(tickView.DepthList, tickView.AskPrice1);
+                int BidPos = AskPos - 1;
+                int _BidPos = BidPos;
+                if (_BidPos >= 0)
+                {
+                    marketData.BidPrice1 = tickView.DepthList[_BidPos].Price;
+                    marketData.BidVolume1 = tickView.DepthList[_BidPos].Size;
+                    --_BidPos;
+                    if (_BidPos >= 0)
+                    {
+                        marketData.BidPrice2 = tickView.DepthList[_BidPos].Price;
+                        marketData.BidVolume2 = tickView.DepthList[_BidPos].Size;
+                        --_BidPos;
+                        if (_BidPos >= 0)
+                        {
+                            marketData.BidPrice3 = tickView.DepthList[_BidPos].Price;
+                            marketData.BidVolume3 = tickView.DepthList[_BidPos].Size;
+                            --_BidPos;
+                            if (_BidPos >= 0)
+                            {
+                                marketData.BidPrice4 = tickView.DepthList[_BidPos].Price;
+                                marketData.BidVolume4 = tickView.DepthList[_BidPos].Size;
+                                --_BidPos;
+                                if (_BidPos >= 0)
+                                {
+                                    marketData.BidPrice5 = tickView.DepthList[_BidPos].Price;
+                                    marketData.BidVolume5 = tickView.DepthList[_BidPos].Size;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                int _AskPos = AskPos;
+                if (_AskPos < count)
+                {
+                    marketData.AskPrice1 = tickView.DepthList[_AskPos].Price;
+                    marketData.AskVolume1 = tickView.DepthList[_AskPos].Size;
+                    ++_AskPos;
+                    if (_AskPos < count)
+                    {
+                        marketData.AskPrice2 = tickView.DepthList[_AskPos].Price;
+                        marketData.AskVolume2 = tickView.DepthList[_AskPos].Size;
+                        ++_AskPos;
+                        if (_AskPos < count)
+                        {
+                            marketData.AskPrice3 = tickView.DepthList[_AskPos].Price;
+                            marketData.AskVolume3 = tickView.DepthList[_AskPos].Size;
+                            ++_AskPos;
+                            if (_AskPos < count)
+                            {
+                                marketData.AskPrice4 = tickView.DepthList[_AskPos].Price;
+                                marketData.AskVolume4 = tickView.DepthList[_AskPos].Size;
+                                ++_AskPos;
+                                if (_AskPos < count)
+                                {
+                                    marketData.AskPrice5 = tickView.DepthList[_AskPos].Price;
+                                    marketData.AskVolume5 = tickView.DepthList[_AskPos].Size;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return marketData;
+        }
+
         public bool Enqueue()
         {
             if (EventQueue.IsFull() || EndOfSeries) {
@@ -94,33 +200,29 @@ namespace QuantBox
             if (_current != null && _current.HasNext) {
                 var tick = _current.Next();
                 var dateTime = _current.Codec.GetDateTime(tick.ActionDay == 0?tick.TradingDay:tick.ActionDay).Add(_current.Codec.GetUpdateTime(tick));
+                var marketData = PbTick2DepthMarketDataField(_current.Codec, tick);
+                
+                if (_info.SubscribeTrade) {
+                    var trade = new TradeEx(dateTime, 0, _info.InstrumentId, marketData.LastPrice, (int)marketData.Volume);
+                    trade.Size -= _lastTradeSize;
+                    trade.DepthMarketData = marketData;
+                    EventQueue.Enqueue(trade);
+                    _lastTradeSize = (int)marketData.Volume;
+                }
 
                 // 在这个地方式可以试着生成自己的TradeEx，这样在策略中，模拟与实盘的效果就完全一样了
                 if (_info.SubscribeBidAsk)
                 {
-                    int count = tick.DepthList == null ? 0 : tick.DepthList.Count;
-                    if(count>0)
+                    if(marketData.BidVolume1>0)
                     {
-                        int AskPos = DepthListHelper.FindAsk1Position(tick.DepthList, tick.AskPrice1);
-                        int BidPos = AskPos - 1;
-                        if (BidPos >= 0 && BidPos < count)
-                        {
-                            var bid = new Bid(dateTime, 0, _info.InstrumentId, _current.Codec.TickToPrice(tick.DepthList[BidPos].Price), tick.DepthList[BidPos].Size);
-                            EventQueue.Enqueue(bid);
-                        }
-                        if (AskPos >= 0 && AskPos < count)
-                        {
-                            var ask = new Ask(dateTime, 0, _info.InstrumentId, _current.Codec.TickToPrice(tick.DepthList[AskPos].Price), tick.DepthList[AskPos].Size);
-                            EventQueue.Enqueue(ask);
-                        }
+                        var bid = new Bid(dateTime, 0, _info.InstrumentId, marketData.BidPrice1, marketData.BidVolume1);
+                        EventQueue.Enqueue(bid);
                     }
-                }
-
-                if (_info.SubscribeTrade) {
-                    var trade = new Trade(dateTime, 0, _info.InstrumentId, _current.Codec.GetLastPrice(tick), (int)_current.Codec.GetVolume(tick));
-                    trade.Size -= _lastTradeSize;
-                    EventQueue.Enqueue(trade);
-                    _lastTradeSize = (int)_current.Codec.GetVolume(tick);
+                    if (marketData.AskVolume1 > 0)
+                    {
+                        var ask = new Ask(dateTime, 0, _info.InstrumentId, marketData.AskPrice1, marketData.AskVolume1);
+                        EventQueue.Enqueue(ask);
+                    }
                 }
 
                 _completed += _current.Setp;

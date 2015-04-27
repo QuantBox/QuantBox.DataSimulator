@@ -40,7 +40,7 @@ namespace QuantBox
                 Instrument inst = framework.InstrumentManager.Get(symbol);
                 if(inst == null)
                 {
-                    inst = new Instrument(InstrumentType.Synthetic, symbol);
+                    inst = new Instrument(SmartQuant.InstrumentType.Synthetic, symbol);
                     framework.InstrumentManager.Add(inst, false);
                 }
                 instruments.Add(inst);
