@@ -8,7 +8,7 @@ using SmartQuant;
 using QuantBox.Data.Serializer.V2;
 using QuantBox.XAPI;
 using Ideafixxxer.Generics;
-using QuantBox.APIProvider;
+using QuantBox.Extensions;
 
 namespace QuantBox
 {
