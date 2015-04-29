@@ -50,7 +50,8 @@ namespace QuantBox
 
                 while (currentNode != null) {
                     var serie = currentNode.Data;
-                    if (!serie.EndOfSeries) {
+                    if (!serie.endOfSeries)
+                    {
                         serie.Enqueue();
                         prevNode = currentNode;
                     }
@@ -62,7 +63,7 @@ namespace QuantBox
                             prevNode.Next = currentNode.Next;
                         }
                         _dataSeries.Count--;
-                        serie.EventQueue.Enqueue(new OnQueueClosed(serie.EventQueue));
+                        serie.eventQueue.Enqueue(new OnQueueClosed(serie.eventQueue));
                     }
                     currentNode = currentNode.Next;
                 }
@@ -72,23 +73,70 @@ namespace QuantBox
             Console.WriteLine(DateTime.Now + _thread.Name + " stopped");
         }
 
+        //void Subscribe(Instrument instrument, DateTime dateTime1, DateTime dateTime2)
+        //{
+        //    Console.WriteLine("{0} {1}::Subscribe {2}", DateTime.Now, this.Name, instrument.Symbol);
+        //    var info = new SubscribeInfo();
+        //    info.DatePath = Path.Combine(DataPath, instrument.Symbol);
+        //    info.DateTime1 = dateTime1;
+        //    info.DateTime2 = dateTime2;
+        //    info.InstrumentId = instrument.Id;
+        //    info.SubscribeBidAsk = SubscribeBid && SubscribeAsk;
+        //    info.SubscribeTrade = SubscribeTrade;
+
+        //    var queue = new EventQueue(1, 0, 2, 0x61a8) {
+        //        IsSynched = true
+        //    };
+        //    queue.Enqueue(new OnQueueOpened(queue));
+        //    framework.EventBus.DataPipe.Add(queue);
+        //    _dataSeries.Add(new DataSeriesObject(info, queue));
+        //}
+
         void Subscribe(Instrument instrument, DateTime dateTime1, DateTime dateTime2)
         {
             Console.WriteLine("{0} {1}::Subscribe {2}", DateTime.Now, this.Name, instrument.Symbol);
-            var info = new SubscribeInfo();
-            info.DatePath = Path.Combine(DataPath, instrument.Symbol);
-            info.DateTime1 = dateTime1;
-            info.DateTime2 = dateTime2;
-            info.InstrumentId = instrument.Id;
-            info.SubscribeBidAsk = SubscribeBid && SubscribeAsk;
-            info.SubscribeTrade = SubscribeTrade;
 
-            var queue = new EventQueue(1, 0, 2, 0x61a8) {
-                IsSynched = true
-            };
-            queue.Enqueue(new OnQueueOpened(queue));
-            framework.EventBus.DataPipe.Add(queue);
-            _dataSeries.Add(new DataSeriesObject(info, queue));
+            ProtobufDataZeroReader reader = new ProtobufDataZeroReader();
+            reader.GetDataSeries(instrument.Id, Path.Combine(DataPath, instrument.Symbol), dateTime1, dateTime2);
+            IDataSeries Trades = null;
+            IDataSeries Bids = null;
+            IDataSeries Asks = null;
+
+            if(SubscribeTrade || SubscribeBid || SubscribeAsk)
+            {
+                reader.OutputSeries(out Trades, out Bids, out Asks);
+            }
+
+            if (SubscribeTrade && Trades != null && Trades.Count > 0)
+            {
+                var queue = new EventQueue(1, 0, 2, 0x61a8)
+                {
+                    IsSynched = true
+                };
+                queue.Enqueue(new OnQueueOpened(queue));
+                framework.EventBus.DataPipe.Add(queue);
+                _dataSeries.Add(new DataSeriesObject(Trades, dateTime1, dateTime2, queue, this.Processor));
+            }
+            if (SubscribeBid && Bids != null && Bids.Count > 0)
+            {
+                var queue = new EventQueue(1, 0, 2, 0x61a8)
+                {
+                    IsSynched = true
+                };
+                queue.Enqueue(new OnQueueOpened(queue));
+                framework.EventBus.DataPipe.Add(queue);
+                _dataSeries.Add(new DataSeriesObject(Bids, dateTime1, dateTime2, queue, this.Processor));
+            }
+            if (SubscribeAsk && Asks != null && Asks.Count > 0)
+            {
+                var queue = new EventQueue(1, 0, 2, 0x61a8)
+                {
+                    IsSynched = true
+                };
+                queue.Enqueue(new OnQueueOpened(queue));
+                framework.EventBus.DataPipe.Add(queue);
+                _dataSeries.Add(new DataSeriesObject(Asks, dateTime1, dateTime2, queue, this.Processor));
+            }
         }
 
         public FileDataSimulator(Framework framework)
