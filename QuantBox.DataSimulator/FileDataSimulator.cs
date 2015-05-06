@@ -96,6 +96,7 @@ namespace QuantBox
         {
             Console.WriteLine("{0} {1}::Subscribe {2}", DateTime.Now, this.Name, instrument.Symbol);
 
+            // 在这里一开始就加载完，需要一点时间，后期考虑将数据与回测结合起来使用
             ProtobufDataZeroReader reader = new ProtobufDataZeroReader();
             reader.GetDataSeries(instrument.Id, Path.Combine(DataPath, instrument.Symbol), dateTime1, dateTime2);
             IDataSeries Trades = null;

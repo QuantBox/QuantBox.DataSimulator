@@ -19,12 +19,12 @@ namespace QuantBox
     public class ProtobufDataZeroReader
     {
         int _InstrumentId;
-        private Stream _stream;
         public QuantBox.Data.Serializer.PbTickSerializer Serializer = new QuantBox.Data.Serializer.PbTickSerializer();
         public List<QuantBox.Data.Serializer.V2.PbTick> Series = new List<Data.Serializer.V2.PbTick>();
 
         public List<QuantBox.Data.Serializer.V2.PbTick> ReadOneFile(FileInfo file)
         {
+            Stream _stream = new MemoryStream();
             var fileStream = file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             {
                 try
@@ -35,7 +35,7 @@ namespace QuantBox
                         _stream.Seek(0, SeekOrigin.Begin);
                     }
                 }
-                catch
+                catch(Exception ex)
                 {
                     _stream = fileStream;
                     _stream.Seek(0, SeekOrigin.Begin);
@@ -52,6 +52,7 @@ namespace QuantBox
             }
 
             var list = new DirectoryInfo(DataPath).GetFiles().ToList();
+            //var list = new DirectoryInfo(DataPath).GetFiles("IF1506*",SearchOption.AllDirectories).ToList();
             list.Sort((x, y) => String.Compare(x.Name, y.Name, StringComparison.Ordinal));
 
             foreach (var file in list)
