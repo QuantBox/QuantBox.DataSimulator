@@ -35,6 +35,12 @@ namespace QuantBox
                 //    continue;
 
                 //string symbol = match.Groups[0].Value;
+                // 以最深层的目录名做为合约名
+                var subdir = path.GetDirectories("*", System.IO.SearchOption.TopDirectoryOnly);
+                if(subdir.Length>0)
+                {
+                    continue;
+                }
                 string symbol = path.Name;
 
                 Instrument inst = framework.InstrumentManager.Get(symbol);
