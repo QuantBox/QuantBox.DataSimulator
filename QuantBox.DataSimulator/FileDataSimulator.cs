@@ -27,6 +27,7 @@ namespace QuantBox
                 IsBackground = true
             };
             _thread.Start();
+            _isRunning = true;
         }
 
         void ThreadRun()
@@ -42,7 +43,6 @@ namespace QuantBox
             queue.Enqueue(new OnSimulatorStart(DateTime1, DateTime2, 0L));
             queue.Enqueue(new OnQueueClosed(queue));
             framework.EventBus.DataPipe.Add(queue);
-            _isRunning = true;
             _isExiting = false;
             while (!_isExiting) {
                 var currentNode = _dataSeries.First;
