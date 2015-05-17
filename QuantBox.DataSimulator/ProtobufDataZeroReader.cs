@@ -18,11 +18,15 @@ namespace QuantBox
 {
     public class ProtobufDataZeroReader
     {
+        public bool SubscribeExternData;
+        public bool SubscribeAsk;
+        public bool SubscribeBid;
+
         int _InstrumentId;
         public QuantBox.Data.Serializer.PbTickSerializer Serializer = new QuantBox.Data.Serializer.PbTickSerializer();
-        public List<QuantBox.Data.Serializer.V2.PbTick> Series = new List<Data.Serializer.V2.PbTick>();
+        public List<QuantBox.Data.Serializer.V2.PbTickView> Series = new List<Data.Serializer.V2.PbTickView>();
 
-        public List<QuantBox.Data.Serializer.V2.PbTick> ReadOneFile(FileInfo file)
+        public List<QuantBox.Data.Serializer.V2.PbTickView> ReadOneFile(FileInfo file)
         {
             Stream _stream = new MemoryStream();
             var fileStream = file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -41,7 +45,7 @@ namespace QuantBox
                     _stream.Seek(0, SeekOrigin.Begin);
                 }
             }
-            return Serializer.Read(_stream);
+            return Serializer.Read2View(_stream);
         }
         public void GetDataSeries(int instrumentId,string DataPath, DateTime dateTime1, DateTime dateTime2)
         {
@@ -71,36 +75,37 @@ namespace QuantBox
             }
         }
 
-        private DepthMarketDataField PbTick2DepthMarketDataField(PbTickCodec codec, PbTick tick)
+        private DepthMarketDataField PbTick2DepthMarketDataField(PbTickCodec codec, PbTickView tickView)
         {
-            PbTickView tickView = codec.Data2View(tick, false);
-
             DepthMarketDataField marketData = default(DepthMarketDataField);
-            codec.GetUpdateTime(tick, out marketData.UpdateTime, out marketData.UpdateMillisec);
+            codec.GetUpdateTime(tickView, out marketData.UpdateTime, out marketData.UpdateMillisec);
 
             marketData.TradingDay = tickView.TradingDay;
             marketData.ActionDay = tickView.ActionDay;
             marketData.LastPrice = tickView.LastPrice;
             marketData.Volume = tickView.Volume;
-            marketData.Turnover = tickView.Turnover;
-            marketData.OpenInterest = tickView.OpenInterest;
-            marketData.AveragePrice = tickView.AveragePrice;
-            if (tickView.Bar != null)
+            if (SubscribeExternData)
             {
-                marketData.OpenPrice = tickView.Bar.Open;
-                marketData.HighestPrice = tickView.Bar.High;
-                marketData.LowestPrice = tickView.Bar.Low;
-                marketData.ClosePrice = tickView.Bar.Close;
-            }
-            if (tickView.Static != null)
-            {
-                marketData.LowerLimitPrice = tickView.Static.LowerLimitPrice;
-                marketData.UpperLimitPrice = tickView.Static.UpperLimitPrice;
-                marketData.SettlementPrice = tickView.Static.SettlementPrice;
-                marketData.Symbol = tickView.Static.Symbol;
-                if (!string.IsNullOrWhiteSpace(tickView.Static.Exchange))
+                marketData.Turnover = tickView.Turnover;
+                marketData.OpenInterest = tickView.OpenInterest;
+                marketData.AveragePrice = tickView.AveragePrice;
+                if (tickView.Bar != null)
                 {
-                    marketData.Exchange = Enum<ExchangeType>.Parse(tickView.Static.Exchange);
+                    marketData.OpenPrice = tickView.Bar.Open;
+                    marketData.HighestPrice = tickView.Bar.High;
+                    marketData.LowestPrice = tickView.Bar.Low;
+                    marketData.ClosePrice = tickView.Bar.Close;
+                }
+                if (tickView.Static != null)
+                {
+                    marketData.LowerLimitPrice = tickView.Static.LowerLimitPrice;
+                    marketData.UpperLimitPrice = tickView.Static.UpperLimitPrice;
+                    marketData.SettlementPrice = tickView.Static.SettlementPrice;
+                    marketData.Symbol = tickView.Static.Symbol;
+                    if (!string.IsNullOrWhiteSpace(tickView.Static.Exchange))
+                    {
+                        marketData.Exchange = Enum<ExchangeType>.Parse(tickView.Static.Exchange);
+                    }
                 }
             }
 
@@ -110,7 +115,7 @@ namespace QuantBox
                 int AskPos = DepthListHelper.FindAsk1Position(tickView.DepthList, tickView.AskPrice1);
                 int BidPos = AskPos - 1;
                 int _BidPos = BidPos;
-                if (_BidPos >= 0)
+                if (_BidPos >= 0 && SubscribeBid)
                 {
                     marketData.BidPrice1 = tickView.DepthList[_BidPos].Price;
                     marketData.BidVolume1 = tickView.DepthList[_BidPos].Size;
@@ -141,7 +146,7 @@ namespace QuantBox
                 }
 
                 int _AskPos = AskPos;
-                if (_AskPos < count)
+                if (_AskPos < count && SubscribeAsk)
                 {
                     marketData.AskPrice1 = tickView.DepthList[_AskPos].Price;
                     marketData.AskVolume1 = tickView.DepthList[_AskPos].Size;
@@ -193,10 +198,20 @@ namespace QuantBox
                 var dateTime = codec.GetDateTime(s.ActionDay == 0 ? s.TradingDay : s.ActionDay).Add(codec.GetUpdateTime(s));
                 var tick = PbTick2DepthMarketDataField(codec, s);
 
-                var trade = new TradeEx(dateTime, 0, _InstrumentId, tick.LastPrice, (int)tick.Volume);
-                trade.Size -= _lastTradeSize;
-                trade.DepthMarketData = tick;
-                trades.Add(trade);
+                if(SubscribeExternData)
+                {
+                    var trade = new TradeEx(dateTime, 0, _InstrumentId, tick.LastPrice, (int)tick.Volume);
+                    trade.Size -= _lastTradeSize;
+                    trade.DepthMarketData = tick;
+                    trades.Add(trade);
+                }
+                else
+                {
+                    var trade = new Trade(dateTime, 0, _InstrumentId, tick.LastPrice, (int)tick.Volume);
+                    trade.Size -= _lastTradeSize;
+                    trades.Add(trade);
+                }
+                
 
                 if (tick.BidVolume1 > 0)
                 {

@@ -9,15 +9,17 @@ namespace QuantBox
     public class BacktestInstrumentServer : InstrumentServer
     {
         public string Path { get; set; }
-        public BacktestInstrumentServer(Framework framework,string path)
+        public bool Save { get; set; }
+        public BacktestInstrumentServer(Framework framework,string path,bool save)
             : base(framework)
         {
             Path = path;
+            Save = save;
         }
 
-        public static void AddDirectoryInstrument(Framework framework, string path)
+        public static void AddDirectoryInstrument(Framework framework, string path, bool save = false)
         {
-            var list = new BacktestInstrumentServer(framework, path).Load();
+            var list = new BacktestInstrumentServer(framework, path, save).Load();
         }
 
         public override InstrumentList Load()
@@ -47,7 +49,7 @@ namespace QuantBox
                 if(inst == null)
                 {
                     inst = new Instrument(SmartQuant.InstrumentType.Synthetic, symbol);
-                    framework.InstrumentManager.Add(inst, false);
+                    framework.InstrumentManager.Add(inst, Save);
                 }
                 instruments.Add(inst);
             }
