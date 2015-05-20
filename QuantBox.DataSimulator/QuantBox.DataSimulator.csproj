@@ -31,9 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="QuantBox.Data.Serializer, Version=2015.3.26.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="QuantBox.Data.Serializer, Version=2015.5.8.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\lib\QuantBox.Data.Serializer.dll</HintPath>
+      <HintPath>C:\Program Files\SmartQuant Ltd\OpenQuant 2014\QuantBox.Data.Serializer.dll</HintPath>
     </Reference>
     <Reference Include="QuantBox.Extensions, Version=1.0.0.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
