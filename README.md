@@ -28,6 +28,9 @@ public Backtest(Framework framework)
 	}
 	// 请修改成你自己的数据目录
 	pvd.DataPath = @"d:\wukan\Desktop\Data";
+	pvd.SubscribeExternData = true;
+	pvd.SubscribeAsk = true;
+	pvd.SubscribeBid = true;
 	framework.ProviderManager.DataSimulator = pvd;
 	
 	// 临时添加合约用于回测，不保存
