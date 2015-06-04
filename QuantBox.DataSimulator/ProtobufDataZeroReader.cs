@@ -106,6 +106,9 @@ namespace QuantBox
                     {
                         marketData.Exchange = Enum<ExchangeType>.Parse(tickView.Static.Exchange);
                     }
+                    marketData.PreClosePrice = tickView.Static.PreClosePrice;
+                    marketData.PreSettlementPrice = tickView.Static.PreSettlementPrice;
+                    marketData.PreOpenInterest = tickView.Static.PreOpenInterest;
                 }
             }
 
@@ -114,9 +117,14 @@ namespace QuantBox
             {
                 int AskPos = DepthListHelper.FindAsk1Position(tickView.DepthList, tickView.AskPrice1);
                 int BidPos = AskPos - 1;
+                int BidCount = BidPos + 1;
+                int AskCount = count - AskPos;
+
+                marketData.Bids = new DepthField[0];
+                marketData.Asks = new DepthField[0];
+
                 if(SubscribeBid)
                 {
-                    int BidCount = BidPos+1;
                     if(BidCount>0)
                     {
                         marketData.Bids = new DepthField[BidCount];
@@ -135,7 +143,6 @@ namespace QuantBox
                 }
                 if (SubscribeAsk)
                 {
-                    int AskCount = count - AskPos;
                     if (AskCount > 0)
                     {
                         marketData.Asks = new DepthField[AskCount];
