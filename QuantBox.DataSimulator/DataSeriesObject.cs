@@ -87,7 +87,8 @@ namespace QuantBox
                 //-----------------------
                 // DataProcessor其实只是Bar处理，由于读到的行情全是Tick，所以这部分可忽视
                 //obj = processor.OnData(this);
-                Emit(obj);
+                // 这地方居然会导致OnTrade两次
+                //Emit(obj);
                 //-----------------------
 
                 current += 1L;
