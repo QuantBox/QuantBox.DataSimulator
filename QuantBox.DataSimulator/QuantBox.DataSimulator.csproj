@@ -58,6 +58,7 @@
   <ItemGroup>
     <Compile Include="BacktestInstrumentServer.cs" />
     <Compile Include="DataSeriesObject.cs" />
+    <Compile Include="PathHelper.cs" />
     <Compile Include="ProtobufDataZeroReader.cs" />
     <Compile Include="SubscribeInfo.cs" />
     <Compile Include="DataSeriesObject_bak.cs" />

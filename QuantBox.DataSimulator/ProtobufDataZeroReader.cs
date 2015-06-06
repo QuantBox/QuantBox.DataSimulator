@@ -1,4 +1,5 @@
-﻿using Ideafixxxer.Generics;
+﻿using ArchiveData;
+using Ideafixxxer.Generics;
 using QuantBox.Data.Serializer;
 using QuantBox.Data.Serializer.V2;
 using QuantBox.Extensions;
@@ -21,6 +22,9 @@ namespace QuantBox
         public bool SubscribeExternData = true;
         public bool SubscribeAsk = true;
         public bool SubscribeBid = true;
+
+        public string DataPath_Realtime;
+        public string DataPath_Instrument;
 
         int _InstrumentId;
         public QuantBox.Data.Serializer.PbTickSerializer Serializer = new QuantBox.Data.Serializer.PbTickSerializer();
@@ -47,19 +51,89 @@ namespace QuantBox
             }
             return Serializer.Read2View(_stream);
         }
-        public void GetDataSeries(int instrumentId,string DataPath, DateTime dateTime1, DateTime dateTime2)
+
+        // 从分类好的目录中取中所有合约
+        public List<FileInfo> GetData_Instrument(Instrument inst)
         {
-            _InstrumentId = instrumentId;
-            if (!Directory.Exists(DataPath))
+            List<FileInfo> resultList = new List<FileInfo>();
+
+            // 直接查找某一目录是否存在
+            string instrument = inst.Symbol;
+            int i = inst.Symbol.IndexOf('.');
+            if(i>=0)
             {
-                return;
+                instrument = instrument.Substring(0,i);
             }
 
-            var list = new DirectoryInfo(DataPath).GetFiles().ToList();
-            //var list = new DirectoryInfo(DataPath).GetFiles("IF1506*",SearchOption.AllDirectories).ToList();
-            list.Sort((x, y) => String.Compare(x.Name, y.Name, StringComparison.Ordinal));
+            var di = new DirectoryInfo(DataPath_Instrument);
 
-            foreach (var file in list)
+            if (!di.Exists)
+                return resultList;
+
+            var list = di.GetDirectories(instrument, System.IO.SearchOption.AllDirectories);
+            foreach(var l in list)
+            {
+                resultList.AddRange(l.GetFiles());
+            }
+
+            return resultList;
+        }
+
+        // 从实时目录中取
+        public List<FileInfo> GetData_Realtime(Instrument inst)
+        {
+            // 直接查找某一类的文件是否存在
+            List<FileInfo> resultList = new List<FileInfo>();
+
+            var di = new DirectoryInfo(DataPath_Realtime);
+
+            if (!di.Exists)
+                return resultList;
+
+            // 这下会找到很多相同名字开头的合约，需要再处理一下，需要得到匹配度最高的
+            var list = di.GetFiles(inst.Symbol + "*").ToList();
+            foreach(var l in list)
+            {
+                string _exchange = string.Empty;
+                string _product = string.Empty;
+                string _instrument = string.Empty;
+                string _symbol = string.Empty;
+                string _date = string.Empty;
+                if (PathHelper.SplitFileName(l.Name, out _exchange, out _product, out _instrument, out _date))
+                {
+                    // 合约名中带交易所
+                    if(inst.Symbol.IndexOf('.')>=0)
+                    {
+                        if(inst.Symbol == string.Format("{0}.{1}",_instrument,_exchange))
+                        {
+                            resultList.Add(l);
+                        }
+                    }
+                    else
+                    {
+                        if (inst.Symbol == _instrument)
+                        {
+                            resultList.Add(l);
+                        }
+                    }
+                }
+            }
+
+            return resultList;
+        }
+
+        public void GetDataSeries(Instrument instrument, DateTime dateTime1, DateTime dateTime2)
+        {
+            _InstrumentId = instrument.Id;
+
+            List<FileInfo> resultList = new List<FileInfo>();
+
+            resultList.AddRange(GetData_Instrument(instrument));
+            resultList.AddRange(GetData_Realtime(instrument));
+            
+            resultList.Sort((x, y) => String.Compare(x.Name, y.Name, StringComparison.Ordinal));
+
+            foreach (var file in resultList)
             {
                 var macth = Regex.Match(file.Name, @"\d{8}");
                 if (macth.Success)

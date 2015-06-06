@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using SmartQuant;
+using System.Linq;
+using ArchiveData;
 
 namespace QuantBox
 {
@@ -10,16 +12,19 @@ namespace QuantBox
     {
         public string Path { get; set; }
         public bool Save { get; set; }
-        public BacktestInstrumentServer(Framework framework,string path,bool save)
+
+        public bool UseFileName { get; set; }
+        public BacktestInstrumentServer(Framework framework, string path, bool save, bool useFileName)
             : base(framework)
         {
             Path = path;
             Save = save;
+            UseFileName = useFileName;
         }
 
-        public static void AddDirectoryInstrument(Framework framework, string path, bool save = false)
+        public static void AddDirectoryInstrument(Framework framework, string path, bool save = false,bool useFileName = true)
         {
-            var list = new BacktestInstrumentServer(framework, path, save).Load();
+            var list = new BacktestInstrumentServer(framework, path, save, useFileName).Load();
         }
 
         public override InstrumentList Load()
@@ -32,26 +37,51 @@ namespace QuantBox
             var dir = new DirectoryInfo(Path);
             foreach (var path in dir.GetDirectories("*", System.IO.SearchOption.AllDirectories))
             {
-                //var match = Regex.Match(path.Name, @"([a-zA-Z]+)\d+");
-                //if (!match.Success)
-                //    continue;
-
-                //string symbol = match.Groups[0].Value;
                 // 以最深层的目录名做为合约名
                 var subdir = path.GetDirectories("*", System.IO.SearchOption.TopDirectoryOnly);
                 if(subdir.Length>0)
                 {
                     continue;
                 }
-                string symbol = path.Name;
 
-                Instrument inst = framework.InstrumentManager.Get(symbol);
-                if(inst == null)
+                string symbol = path.Name;
+                if(UseFileName)
                 {
-                    inst = new Instrument(SmartQuant.InstrumentType.Synthetic, symbol);
-                    framework.InstrumentManager.Add(inst, Save);
+                    var fis = path.GetFiles();
+                    foreach(var fi in fis)
+                    {
+                        string _exchange = string.Empty;
+                        string _product = string.Empty;
+                        string _instrument = string.Empty;
+                        string _symbol = string.Empty;
+                        string _date = string.Empty;
+                        if (PathHelper.SplitFileName(fi.Name, out _exchange, out _product, out _instrument, out _date))
+                        {
+                            if (!string.IsNullOrEmpty(_exchange))
+                            {
+                                symbol = string.Format("{0}.{1}", _instrument, _exchange);
+                            }
+                        }
+
+                        Instrument inst = framework.InstrumentManager.Get(symbol);
+                        if (inst == null)
+                        {
+                            inst = new Instrument(SmartQuant.InstrumentType.Synthetic, symbol);
+                            framework.InstrumentManager.Add(inst, Save);
+                        }
+                        instruments.Add(inst);
+                    }
                 }
-                instruments.Add(inst);
+                else
+                {
+                    Instrument inst = framework.InstrumentManager.Get(symbol);
+                    if (inst == null)
+                    {
+                        inst = new Instrument(SmartQuant.InstrumentType.Synthetic, symbol);
+                        framework.InstrumentManager.Add(inst, Save);
+                    }
+                    instruments.Add(inst);
+                }
             }
             return instruments;
         }

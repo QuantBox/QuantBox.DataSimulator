@@ -27,14 +27,17 @@ public Backtest(Framework framework)
 		framework.ProviderManager.AddProvider(pvd);
 	}
 	// 请修改成你自己的数据目录
-	pvd.DataPath = @"d:\wukan\Desktop\Data";
+	pvd.DataPath_Instrument = @"d:\wukan\test\Data_Instrument";
+	pvd.DataPath_Realtime = @"d:\wukan\test\Data";
+	
 	pvd.SubscribeExternData = true;
 	pvd.SubscribeAsk = true;
 	pvd.SubscribeBid = true;
+	
 	framework.ProviderManager.DataSimulator = pvd;
 	
 	// 临时添加合约用于回测，不保存
-	BacktestInstrumentServer.AddDirectoryInstrument(framework,pvd.DataPath);
+	BacktestInstrumentServer.AddDirectoryInstrument(framework,pvd.DataPath,false,true);
 }</code></pre>
 
 ## 解释

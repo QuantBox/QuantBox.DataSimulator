@@ -12,7 +12,8 @@ namespace QuantBox
     public class FileDataSimulator : Provider, IDataSimulator
     {
         [Editor(typeof(System.Windows.Forms.Design.FolderNameEditor), typeof(System.Drawing.Design.UITypeEditor))]
-        public string DataPath { get; set; }
+        public string DataPath_Instrument { get; set; }
+        public string DataPath_Realtime { get; set; }
 
         private readonly BarFilter _barFilter;
         private bool _isExiting;
@@ -98,10 +99,15 @@ namespace QuantBox
 
             // 在这里一开始就加载完，需要一点时间，后期考虑将数据与回测结合起来使用
             ProtobufDataZeroReader reader = new ProtobufDataZeroReader();
+
+            reader.DataPath_Instrument = DataPath_Instrument;
+            reader.DataPath_Realtime = DataPath_Realtime;
+
             reader.SubscribeExternData = SubscribeExternData;
             reader.SubscribeAsk = SubscribeAsk;
             reader.SubscribeBid = SubscribeBid;
-            reader.GetDataSeries(instrument.Id, Path.Combine(DataPath, instrument.Symbol), dateTime1, dateTime2);
+
+            reader.GetDataSeries(instrument, dateTime1, dateTime2);
             IDataSeries Trades = null;
             IDataSeries Bids = null;
             IDataSeries Asks = null;
