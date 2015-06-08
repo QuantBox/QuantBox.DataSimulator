@@ -57,6 +57,9 @@ namespace QuantBox
         {
             List<FileInfo> resultList = new List<FileInfo>();
 
+            if (string.IsNullOrEmpty(DataPath_Instrument))
+                return resultList;            
+
             // 直接查找某一目录是否存在
             string instrument = inst.Symbol;
             int i = inst.Symbol.IndexOf('.');
@@ -84,6 +87,9 @@ namespace QuantBox
         {
             // 直接查找某一类的文件是否存在
             List<FileInfo> resultList = new List<FileInfo>();
+
+            if (string.IsNullOrEmpty(DataPath_Realtime))
+                return resultList;   
 
             var di = new DirectoryInfo(DataPath_Realtime);
 
@@ -143,6 +149,7 @@ namespace QuantBox
                         && date >= dateTime1
                         && date <= dateTime2)
                     {
+                        Console.WriteLine("{0} {1}::Load {2}", DateTime.Now, "QBDataSimulator", file.FullName);
                         Series.AddRange(ReadOneFile(file));
                     }
                 }

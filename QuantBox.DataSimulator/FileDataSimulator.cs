@@ -71,7 +71,7 @@ namespace QuantBox
             }
             _isExiting = false;
             _isRunning = false;
-            Console.WriteLine(DateTime.Now + _thread.Name + " stopped");
+            Console.WriteLine(string.Join(" ", DateTime.Now, _thread.Name, @"stopped"));
         }
 
         //void Subscribe(Instrument instrument, DateTime dateTime1, DateTime dateTime2)
@@ -225,7 +225,7 @@ namespace QuantBox
             get { return _barFilter; }
         }
 
-        public void Clear()
+        public override void Clear()
         {
             base.Clear();
             _dataSeries.Clear();
