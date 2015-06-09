@@ -52,10 +52,19 @@ namespace QuantBox
             return Serializer.Read2View(_stream);
         }
 
-        // 从分类好的目录中取中所有合约
-        public List<FileInfo> GetData_Instrument(Instrument inst)
+        private void UnionAndUpdate(SortedDictionary<int,FileInfo> sd_old,SortedDictionary<int, FileInfo> sd_new)
         {
-            List<FileInfo> resultList = new List<FileInfo>();
+            // 用新的覆盖旧的
+            foreach(var kv in sd_new)
+            {
+                sd_old[kv.Key] = kv.Value;
+            }
+        }
+
+        // 从分类好的目录中取中所有合约
+        private SortedDictionary<int, FileInfo> GetData_Instrument(Instrument inst)
+        {
+            SortedDictionary<int, FileInfo> resultList = new SortedDictionary<int, FileInfo>();
 
             if (string.IsNullOrEmpty(DataPath_Instrument))
                 return resultList;            
@@ -76,17 +85,17 @@ namespace QuantBox
             var list = di.GetDirectories(instrument, System.IO.SearchOption.AllDirectories);
             foreach(var l in list)
             {
-                resultList.AddRange(l.GetFiles());
+                UnionAndUpdate(resultList, GetFiles(l, inst.Symbol));
             }
 
             return resultList;
         }
 
         // 从实时目录中取
-        public List<FileInfo> GetData_Realtime(Instrument inst)
+        private SortedDictionary<int, FileInfo> GetData_Realtime(Instrument inst)
         {
             // 直接查找某一类的文件是否存在
-            List<FileInfo> resultList = new List<FileInfo>();
+            SortedDictionary<int, FileInfo> resultList = new SortedDictionary<int, FileInfo>();
 
             if (string.IsNullOrEmpty(DataPath_Realtime))
                 return resultList;   
@@ -97,8 +106,17 @@ namespace QuantBox
                 return resultList;
 
             // 这下会找到很多相同名字开头的合约，需要再处理一下，需要得到匹配度最高的
-            var list = di.GetFiles(inst.Symbol + "*").ToList();
-            foreach(var l in list)
+            UnionAndUpdate(resultList, GetFiles(di, inst.Symbol));
+
+            return resultList;
+        }
+
+        private SortedDictionary<int, FileInfo> GetFiles(DirectoryInfo di, string symbol)
+        {
+            SortedDictionary<int, FileInfo> resultList = new SortedDictionary<int,FileInfo>();
+
+            var list = di.GetFiles(symbol + "*").ToList();
+            foreach (var l in list)
             {
                 string _exchange = string.Empty;
                 string _product = string.Empty;
@@ -107,19 +125,20 @@ namespace QuantBox
                 string _date = string.Empty;
                 if (PathHelper.SplitFileName(l.Name, out _exchange, out _product, out _instrument, out _date))
                 {
+                    int __date = int.Parse(_date);
                     // 合约名中带交易所
-                    if(inst.Symbol.IndexOf('.')>=0)
+                    if (symbol.IndexOf('.') >= 0)
                     {
-                        if(inst.Symbol == string.Format("{0}.{1}",_instrument,_exchange))
+                        if (symbol == string.Format("{0}.{1}", _instrument, _exchange))
                         {
-                            resultList.Add(l);
+                            resultList.Add(__date, l);
                         }
                     }
                     else
                     {
-                        if (inst.Symbol == _instrument)
+                        if (symbol == _instrument)
                         {
-                            resultList.Add(l);
+                            resultList.Add(__date, l);
                         }
                     }
                 }
@@ -132,26 +151,22 @@ namespace QuantBox
         {
             _InstrumentId = instrument.Id;
 
-            List<FileInfo> resultList = new List<FileInfo>();
+            SortedDictionary<int, FileInfo> resultList = new SortedDictionary<int, FileInfo>();
 
-            resultList.AddRange(GetData_Instrument(instrument));
-            resultList.AddRange(GetData_Realtime(instrument));
-            
-            resultList.Sort((x, y) => String.Compare(x.Name, y.Name, StringComparison.Ordinal));
+            // 先取归档的文件，再取实时的，这样实时的会覆盖归档的，即同一日期的文件优先取实时的
+            UnionAndUpdate(resultList, GetData_Instrument(instrument));
+            UnionAndUpdate(resultList, GetData_Realtime(instrument));
 
-            foreach (var file in resultList)
+            int dt1 = dateTime1.Year * 10000 + dateTime1.Month * 100 + dateTime1.Day;
+            int dt2 = dateTime2.Year * 10000 + dateTime2.Month * 100 + dateTime2.Day;
+
+            foreach (var kv in resultList)
             {
-                var macth = Regex.Match(file.Name, @"\d{8}");
-                if (macth.Success)
+                if (kv.Key >= dt1
+                    && kv.Key <= dt2)
                 {
-                    DateTime date;
-                    if (DateTime.TryParseExact(macth.Groups[0].Value, "yyyyMMdd", null, DateTimeStyles.None, out date)
-                        && date >= dateTime1
-                        && date <= dateTime2)
-                    {
-                        Console.WriteLine("{0} {1}::Load {2}", DateTime.Now, "QBDataSimulator", file.FullName);
-                        Series.AddRange(ReadOneFile(file));
-                    }
+                    Console.WriteLine("{0} {1}::Load {2}", DateTime.Now, "QBDataSimulator", kv.Value.FullName);
+                    Series.AddRange(ReadOneFile(kv.Value));
                 }
             }
         }
