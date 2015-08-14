@@ -21,7 +21,7 @@ namespace QuantBox
         private Thread _thread;
         private readonly SmartQuant.LinkedList<DataSeriesObject> _dataSeries = new SmartQuant.LinkedList<DataSeriesObject>();
 
-        void Run()
+        public void Run()
         {
             _thread = new Thread(ThreadRun) {
                 Name = "QuantBox Data Simulator Thread",
@@ -160,7 +160,7 @@ namespace QuantBox
             {
                 SevenZipBase.SetLibraryPath("7z.dll");
             }
-
+            RunOnSubscribe = true;
             id = 50;
             name = "QBDataSimulator";
             description = "QuantBox Data Simulator";
@@ -181,7 +181,10 @@ namespace QuantBox
                 foreach (var inst in instruments) {
                     Subscribe(inst, DateTime1, DateTime2);
                 }
-                Run();
+                if (RunOnSubscribe)
+                {
+                    Run();
+                }
             }
             else {
                 foreach (var inst in instruments) {
@@ -194,7 +197,10 @@ namespace QuantBox
         {
             if (!_isRunning) {
                 Subscribe(instrument, DateTime1, DateTime2);
-                Run();
+                if (RunOnSubscribe)
+                {
+                    Run();
+                }
             }
             else {
                 Subscribe(instrument, framework.Clock.DateTime, DateTime2);
@@ -245,7 +251,7 @@ namespace QuantBox
         public bool SubscribeLevelII { get; set; }
         public bool SubscribeNews { get; set; }
         public bool SubscribeTrade { get; set; }
-
         public bool SubscribeExternData { get; set; }
+        public bool RunOnSubscribe { get; set; }
     }
 }
